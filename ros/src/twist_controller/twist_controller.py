@@ -10,7 +10,7 @@ ONE_GALLON = 0.00379
 K_p, K_i, K_d = 1, 0.001, 0.1 # Throttle P I D constants
 
 class Controller(object):
-    def __init__(self, , *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Input parameters
         self.vehicle_mass = kwargs["vehicle_mass"]
         self.fuel_capacity = kwargs["fuel_capacity"]
@@ -45,7 +45,7 @@ class Controller(object):
 
     def control(self, current_lin_vel, target_lin_vel, target_ang_vel):
 
-        throttle = self.steer_controller.get_steering(current_lin_vel,
+        steering = self.steer_controller.get_steering(current_lin_vel,
                                                       target_lin_vel,
                                                       target_ang_vel)
         # TODO: do we need to filter (measurement) error value?
