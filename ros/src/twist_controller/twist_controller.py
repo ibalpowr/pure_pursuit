@@ -27,16 +27,19 @@ class Controller(object):
 		self.yaw_control = YawController(wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle)
 
 		# PID inputs
-		kp = 0.5
-		ki = 0.01
+		#kp = 0.8
+		#ki = 0.009
+		#kd = 0.0
+		kp = 1
+		ki = 0.04
 		kd = 0.01
 		mn = decel_limit
 		mx = accel_limit
 		self.throttle_pid = PID(kp, ki, kd, mn, mx)
 
-		tau = 0.2
-		ts = 0.1
-		self.low_pass_filter = LowPassFilter(tau, ts)
+		
+		self.low_pass_filter_throttle = LowPassFilter(tau = 2, ts = 1)
+		self.low_pass_filter_steer = LowPassFilter(tau = 2, ts = 1)
 
 		self.vehicle_mass = vehicle_mass
 		self.fuel_capacity = fuel_capacity
@@ -59,6 +62,7 @@ class Controller(object):
 		
 		# now for steering
 		steer = self.yaw_control.get_steering(target_lin_vel, target_ang_vel, current_lin_vel)
+		steer = self.low_pass_filter_steer.filt(steer)
 		brake = 0.
 		throttle = 0.
 
@@ -67,6 +71,7 @@ class Controller(object):
 		# should be close to 0.02 sec ... because of 50Hz
 		current_time = rospy.get_time()
 		sample_time = current_time - self.previous_time
+		rospy.loginfo('SAMPLE_TIME : %f', sample_time)
 		self.previous_time = current_time
 
 
@@ -80,6 +85,7 @@ class Controller(object):
 		 #               min(self.accel_limit*sample_time, error_lin_vel))
 		
 		acceleration = self.throttle_pid.step(error_lin_vel, sample_time)
+		acceleration = self.low_pass_filter_throttle.filt(acceleration)
 
 		if acceleration > 0 : 
 			throttle = acceleration
