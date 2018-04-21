@@ -1,76 +1,91 @@
 #!/usr/bin/env python
 
 import rospy
+
 from geometry_msgs.msg import PoseStamped
+
 from styx_msgs.msg import Lane, Waypoint
 
-import math
+import math, sys
 
-'''
-This node will publish waypoints from the car's current position to some `x` distance ahead.
-
-As mentioned in the doc, you should ideally first implement a version which does not care
-about traffic lights or obstacles.
-
-Once you have created dbw_node, you will update this node to use the status of traffic lights too.
-
-Please note that our simulator also provides the exact location of traffic lights and their
-current status in `/vehicle/traffic_lights` message. You can use this message to build this node
-as well as to verify your TL classifier.
-
-TODO (for Yousuf and Aaron): Stopline location for each traffic light.
-'''
-
-LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
-
+# number of waypoints published by /waypoint_updater
+LOOKAHEAD_WPS = 200
 
 class WaypointUpdater(object):
     def __init__(self):
+        # initializes ros node /waypoint_updater
         rospy.init_node('waypoint_updater')
+        
+        # topic /current_pose comes from bridge.py
+        rospy.Subscriber('/current_pose', PoseStamped, self.current_pose_cb,
+                         queue_size = 1)
+        
+        # topic /base_waypoints comes from waypoint_loader.py
+        rospy.Subscriber('/base_waypoints', Lane, self.base_waypoints_cb,
+                         queue_size = 1)
 
-        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        # create an instance of rospy.Publisher
+        self.final_waypoints_publisher = rospy.Publisher('/final_waypoints', Lane, 
+                                                    queue_size=1)
 
-        # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-
-
-        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
-
-        # TODO: Add other member variables you need below
+        self.current_pose = None
+        self.base_waypoints = None
+        self.final_waypoints = None
+        
+        self.current_closest_seq = None
+        self.previous_pose_timestamp = 0
 
         rospy.spin()
 
-    def pose_cb(self, msg):
-        # TODO: Implement
-        pass
-
-    def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        pass
-
-    def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        pass
-
-    def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message. We will implement it later
-        pass
-
-    def get_waypoint_velocity(self, waypoint):
-        return waypoint.twist.twist.linear.x
-
-    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
-        waypoints[waypoint].twist.twist.linear.x = velocity
-
-    def distance(self, waypoints, wp1, wp2):
-        dist = 0
-        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
-        for i in range(wp1, wp2+1):
-            dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
-            wp1 = i
-        return dist
-
-
+    def current_pose_cb(self, msg):
+        # self.current_pose = /current_pose - header
+        self.current_pose = msg.pose
+        current_pose_timestamp = msg.header.stamp.secs*1000000 + msg.header.stamp.nsecs
+        time_difference = current_pose_timestamp - self.previous_pose_timestamp
+        # will update only if the time difference is becoming greater than 1 second
+        if time_difference > 1000000:
+            self.previous_pose_timestamp = current_pose_timestamp
+            self.togo()
+            
+    def base_waypoints_cb(self, msg):
+        # self.base_waypoints = /base_waypoints - header
+        self.base_waypoints = msg.waypoints
+              
+    def distance(self, p1, p2):
+        x, y, z = p1.x - p2.x, p1.y - p2.y, p1.z - p2.z
+        return math.sqrt(x*x + y*y + z*z)
+        
+    def get_closest_waypoint(self):
+        shortest_dist = float(sys.maxint)
+        closest_seq = 0
+        if self.base_waypoints:
+            for waypoint in self.base_waypoints[::]:
+                dist = self.distance(self.current_pose.position, waypoint.pose.pose.position)
+                if dist < shortest_dist:
+                    # how often this is updated?
+                    # whenever there is new /current_pose
+                    shortest_dist = dist;
+                    closest_seq = waypoint.pose.header.seq
+        return closest_seq
+            
+    def get_final_waypoints(self):
+        # 1, 2, 3, 4, 5
+        # len = 5 ... seq = 2 ... lookahead = 2
+        # 2
+        self.current_closest_seq = self.get_closest_waypoint()
+        if self.base_waypoints:
+            # because python index is left open and right close ... ( ]
+            idx = self.current_closest_seq - 1
+            if (idx + LOOKAHEAD_WPS) < len(self.base_waypoints):
+                return self.base_waypoints[idx:idx+LOOKAHEAD_WPS]
+            
+    def togo(self):
+        lane = Lane()
+        lane.header.frame_id = '/world'
+        lane.header.stamp = rospy.Time(0)
+        lane.waypoints = self.get_final_waypoints()
+        self.final_waypoints_publisher.publish(lane)
+        
 if __name__ == '__main__':
     try:
         WaypointUpdater()

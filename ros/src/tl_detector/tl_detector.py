@@ -10,6 +10,7 @@ from light_classification.tl_classifier import TLClassifier
 import tf
 import cv2
 import yaml
+import numpy as np
 
 STATE_COUNT_THRESHOLD = 3
 
@@ -22,6 +23,20 @@ class TLDetector(object):
         self.camera_image = None
         self.lights = []
 
+        config_string = rospy.get_param("/traffic_light_config")
+        self.config = yaml.load(config_string)
+
+        self.bridge = CvBridge()
+        self.light_classifier = None
+        self.light_classifier = TLClassifier()
+        self.listener = tf.TransformListener()
+        
+        # a dry run test
+        img_full_np = self.light_classifier.load_image(np.zeros((800,600,3)))
+        
+        self.light_classifier.detect_frame(img_full_np)
+        
+
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
@@ -33,16 +48,10 @@ class TLDetector(object):
         rely on the position of the light and the camera image to predict it.
         '''
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1, buff_size=28800000) # for 10 raw 800x600x3 uint8 frames 
 
-        config_string = rospy.get_param("/traffic_light_config")
-        self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
-
-        self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
-        self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
@@ -118,9 +127,47 @@ class TLDetector(object):
             return False
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        
+        #Convert image to RGB format
+        processed_img = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        
+        #convert image to np array
+        img_full_np = self.light_classifier.load_image(processed_img)
 
-        #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        unknown = False
+        light_state = None
+
+        print("detection begins")
+        b, conf, cls_idx = self.light_classifier.detect_frame(img_full_np)
+        print("detection ends")
+        if np.array_equal(b, np.zeros(4)):
+            print ('unknown')
+            print(" ")
+            unknown = True
+        else:
+            if cls_idx == 1.0:
+                light_state = TrafficLight.GREEN
+                rospy.logwarn("upcoming light is green with state %s", light_state)
+                print(" ")
+            elif cls_idx == 2.0:
+                light_state = TrafficLight.RED
+                rospy.logwarn("upcoming light is red with state %s", light_state)
+                print(" ")
+            elif cls_idx == 3.0:
+                light_state = TrafficLight.YELLOW
+                rospy.logwarn("upcoming light is yellow with state %s", light_state)
+                print(" ")
+            elif cls_idx == 4.0:
+                light_state = TrafficLight.UNKNOWN
+                rospy.logwarn("unknown")
+                print(" ")
+            else:
+                light_state = TrafficLight.UNKNOWN
+                rospy.logwarn("unknown")
+                print(" ")
+                               
+        return light_state
+
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -131,7 +178,10 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        light = None
+        # set light to True for testing
+        light = True
+        # set dummy value to light_wp for testing
+        light_wp = None
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']

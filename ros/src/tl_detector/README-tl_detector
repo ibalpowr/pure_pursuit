@@ -1,0 +1,21 @@
+
+MUST - cpu/gpu option:
+   * check tl_detector/light_classification/tl_classifier.py ... lines 17, 28, 30
+   
+MUST - CKPT file:
+   * in our google drive ...
+      ^ https://drive.google.com/drive/folders/19jvqMoNmzwbFdIkm44NHRQLg1fJykkuu
+         - ssd-tf.pb
+   * cp "ssd-tf.pb" to src/tl_detector/light_classification/ folder
+   
+optional (if needed in your system):
+   * install "tensorflow object detector api"
+      1st: done t3-si requirements.txt
+         - your tensorflow is installed in ~/.local/lib/python2.7/site-packages/tensorflow
+      2nd: $ cd ~/.local/lib/python2.7/site-packages/tensorflow
+           $ git clone https://github.com/tensorflow/models.git
+      3rd: $ cd models/research
+           $ protoc object_detection/protos/*.proto --python_out=.
+      4th: modify PYTHONPATH in ~/.bashrc ... add two paths ...
+           $HOME/.local/lib/python2.7/site-packages/tensorflow/models/research
+           $HOME/.local/lib/python2.7/site-packages/tensorflow/models/research/slim
