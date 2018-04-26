@@ -6,6 +6,8 @@ from geometry_msgs.msg import PoseStamped
 
 from styx_msgs.msg import Lane, Waypoint
 
+from std_msgs.msg import Int32
+
 import math, sys
 
 # number of waypoints published by /waypoint_updater
@@ -23,6 +25,10 @@ class WaypointUpdater(object):
         # topic /base_waypoints comes from waypoint_loader.py
         rospy.Subscriber('/base_waypoints', Lane, self.base_waypoints_cb,
                          queue_size = 1)
+                         
+        # apr26thur2018jz0007
+        # published from tl_detector.py
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb, queue_size = 1)
 
         # create an instance of rospy.Publisher
         self.final_waypoints_publisher = rospy.Publisher('/final_waypoints', Lane, 
@@ -31,6 +37,7 @@ class WaypointUpdater(object):
         self.current_pose = None
         self.base_waypoints = None
         self.final_waypoints = None
+        self.stop_line_wp = None
         
         self.current_closest_seq = None
         self.previous_pose_timestamp = 0
@@ -50,6 +57,14 @@ class WaypointUpdater(object):
     def base_waypoints_cb(self, msg):
         # self.base_waypoints = /base_waypoints - header
         self.base_waypoints = msg.waypoints
+        
+    # apr25wed2018jz0208
+    def traffic_cb (self, msg):
+        self.stop_line_wp = msg.data
+        
+        # verify the message
+        print("waypoint updater receives stop line wp as ", self.stop_line_wp)
+        print(" ")
               
     def distance(self, p1, p2):
         x, y, z = p1.x - p2.x, p1.y - p2.y, p1.z - p2.z
