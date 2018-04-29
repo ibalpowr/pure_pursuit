@@ -67,7 +67,7 @@ class DBWNode(object):
             if self.dbw_enabled:
                 self.publish(self.throttle, self.brake, self.steer)
 
-		rate.sleep()
+            rate.sleep()
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()

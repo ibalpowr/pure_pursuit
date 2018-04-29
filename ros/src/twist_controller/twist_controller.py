@@ -61,7 +61,6 @@ class Controller(object):
 
         current_time = rospy.get_time()
         sample_time = current_time - self.previous_time
-        rospy.loginfo('SAMPLE_TIME : %f', sample_time)
         self.previous_time = current_time
 
         throttle = self.throttle_pid.step(error_lin_vel, sample_time)
