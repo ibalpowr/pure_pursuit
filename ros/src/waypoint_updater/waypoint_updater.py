@@ -68,7 +68,7 @@ class WaypointUpdater(object):
 
     # Call back functions
     def traffic_cb(self, msg):
-        self.stop_line_wp_idx = msg.data
+        self.stopline_wp_idx = msg.data
 
     def current_pose_cb(self, msg):
         self.current_pose = msg.pose
