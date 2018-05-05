@@ -65,8 +65,12 @@ class Controller(object):
 
         throttle = self.throttle_pid.step(error_lin_vel, sample_time)
 
-        if throttle < 0 :
+        if throttle < 0:
             brake = abs(throttle) * self.brake_const
             throttle = 0.
+
+        if throttle >= 0 and throttle < 0.1:
+            throttle = 0.
+            brake = self.brake_const
 
         return throttle, brake, steer

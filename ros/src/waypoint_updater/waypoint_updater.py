@@ -40,30 +40,20 @@ class WaypointUpdater(object):
 
         # Debugging parameters
         self.lights = None
-        self.light_wp_idx = None
-        self.num_lights = None
+        # From yaml.load(rospy.get_param("/traffic_light_config"))['stop_line_positions']
+        self.light_wp_idx = [292, 753, 2047, 2580, 6294, 7008, 8540, 9733]
+        self.num_lights = len(self.light_wp_idx)
         self.closest_light_idx = 0
 
         self.loop()
 
     # Debugging functions
-    def initialize_lights_wp_ind(self):
-        if self.base_waypoints and self.lights:
-            self.num_lights = len(self.lights)
-            self.light_wp_idx = [None] * self.num_lights
-            for i, light in enumerate(self.lights):
-                self.light_wp_idx[i] = self.get_closest_idx(light.pose.pose, self.base_waypoints)
-
     def update_closest_light(self, current_seq):
-        if self.light_wp_idx and current_seq > self.light_wp_idx[self.closest_light_idx]:
+        if current_seq > self.light_wp_idx[self.closest_light_idx]:
             self.closest_light_idx += 1
             self.closest_light_idx %= self.num_lights
 
     def lights_cb(self, msg):
-        if not self.light_wp_idx:
-            self.lights = msg.lights
-            self.initialize_lights_wp_ind()
-
         self.lights = msg.lights
 
     # Call back functions
@@ -134,7 +124,7 @@ class WaypointUpdater(object):
             p = Waypoint()
             p.pose = wp.pose
 
-            stop_idx = max(self.stopline_wp_idx - closest_idx - 2, 0)
+            stop_idx = max(self.stopline_wp_idx - closest_idx - 10, 0)
             dist = self.wp_distance (waypoints, i, stop_idx)
             vel = math.sqrt(2 * self.decel_limit * dist)
             if vel < 1.0:
@@ -148,11 +138,11 @@ class WaypointUpdater(object):
         self.current_closest_seq = self.get_closest_waypoint()
         #print "Closest WP IDX: {}".format(self.current_closest_seq)
 
-        if DEBUG:
+        if DEBUG: #Only one cycle
             self.stopline_wp_idx = -1
             self.update_closest_light(self.current_closest_seq)
             if self.lights and self.light_wp_idx and self.lights[self.closest_light_idx].state == 0:
-                self.stopline_wp_idx = self.light_wp_idx[self.closest_light_idx] - 30
+                self.stopline_wp_idx = self.light_wp_idx[self.closest_light_idx]
             #print "Next Red Light WP IDX: {}".format(self.stopline_wp_idx)
 
         farthest_index = self.current_closest_seq + LOOKAHEAD_WPS
