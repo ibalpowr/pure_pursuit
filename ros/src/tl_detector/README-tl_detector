@@ -12,10 +12,13 @@ optional (if needed in your system):
    * install "tensorflow object detector api"
       1st: done t3-si requirements.txt
          - your tensorflow is installed in ~/.local/lib/python2.7/site-packages/tensorflow
-      2nd: $ cd ~/.local/lib/python2.7/site-packages/tensorflow
+      2nd: install more packages
+         - $ sudo apt-get install protobuf-compiler python-pil python-lxml python-tk
+         - $ pip install Cython
+      3rd: $ cd ~/.local/lib/python2.7/site-packages/tensorflow
            $ git clone https://github.com/tensorflow/models.git
-      3rd: $ cd models/research
+      4th: $ cd models/research
            $ protoc object_detection/protos/*.proto --python_out=.
-      4th: modify PYTHONPATH in ~/.bashrc ... add two paths ...
+      5th: modify PYTHONPATH in ~/.bashrc ... add two paths ...
            $HOME/.local/lib/python2.7/site-packages/tensorflow/models/research
            $HOME/.local/lib/python2.7/site-packages/tensorflow/models/research/slim

@@ -11,8 +11,10 @@ from styx_msgs.msg import Lane, Waypoint
 import tf
 import rospy
 
+# apr27fri2018jz0537
 # for wp_yaw_const.csv
-# [meter, meter, 0, 
+# [meter, meter, 0, rad]
+# z = 0 ... 2D
 CSV_HEADER = ['x', 'y', 'z', 'yaw_rad']
 
 # what is its range
@@ -25,6 +27,13 @@ class WaypointLoader(object):
     def __init__(self):
         rospy.init_node('waypoint_loader', log_level=rospy.DEBUG)
 
+
+        # apr28sat2018jz0645
+        # to verify the final_waypoints
+        self.final_waypoints = None
+        rospy.Subscriber('/final_waypoints', Lane, self.final_waypoints_cb, queue_size=1)
+        
+
         self.pub = rospy.Publisher('/base_waypoints', Lane, queue_size=1, latch=True)
 
         # append unit to velocity for clarification
@@ -33,11 +42,23 @@ class WaypointLoader(object):
         self.new_waypoint_loader(rospy.get_param('~path'))
         rospy.spin()
 
+    # apr28sat2018jz0646
+    # add a call back
+    def final_waypoints_cb(self, msg):
+        self.final_waypoints = msg.waypoints
+
+        # uncomment for testing
+        #rospy.loginfo("the length of final waypoints: %s ", len(self.final_waypoints))
+        #print(" ")
+
+
     def new_waypoint_loader(self, path):
         if os.path.isfile(path):
             waypoints = self.load_waypoints(path)
             self.publish(waypoints)
-            rospy.loginfo('Waypoint Loded')
+
+            # apr27fri2018jz0538
+            rospy.logwarn('Waypoint Loaded')
         else:
             rospy.logerr('%s is not a file', path)
 
@@ -73,14 +94,18 @@ class WaypointLoader(object):
     def decelerate(self, waypoints):
         last = waypoints[-1]
         last.twist.twist.linear.x = 0.
-        
+
+        # apr27fri2018jz0532
+        # uncomment below
+
+        # mar25sun2018jz----        
         # comment out below for testing
-        #for wp in waypoints[:-1][::-1]:
-        #    dist = self.distance(wp.pose.pose.position, last.pose.pose.position)
-        #    vel = math.sqrt(2 * MAX_DECEL * dist)
-        #    if vel < 1.:
-        #        vel = 0.
-        #    wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
+        for wp in waypoints[:-1][::-1]:
+            dist = self.distance(wp.pose.pose.position, last.pose.pose.position)
+            vel = math.sqrt(2 * MAX_DECEL * dist)
+            if vel < 1.:
+                vel = 0.
+            wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
         return waypoints
 
     def publish(self, waypoints):

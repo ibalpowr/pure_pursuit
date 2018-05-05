@@ -1,7 +1,9 @@
 from math import atan
 
 class YawController(object):
-    def __init__(self, wheel_base=3, steer_ratio=14.8, min_speed=0.0, max_lat_accel=3.0, max_steer_angle=8.0):
+    # may02wed2018jz0307    
+    #def __init__(self, wheel_base=3, steer_ratio=14.8, min_speed=0.0, max_lat_accel=3.0, max_steer_angle=8.0):
+    def __init__(self, wheel_base=2.8498, steer_ratio=14.8, min_speed=0.0, max_lat_accel=3.0, max_steer_angle=8.0):
         self.wheel_base = wheel_base
         self.steer_ratio = steer_ratio
         self.min_speed = min_speed
@@ -16,6 +18,12 @@ class YawController(object):
         return max(self.min_angle, min(self.max_angle, angle))
 
     def get_steering(self, linear_velocity, angular_velocity, current_velocity):
+        # may02wed2018jz0322
+        # angular_velocity and linear_velocity are from /final_waypoints
+        # current_velocity is from /current_velocity
+        # angular_velocity = current_velocity * desired radius of curvature
+        # v = w * r
+        # to adjust the angular velocity setpoint, based on current speed
         angular_velocity = current_velocity * angular_velocity / linear_velocity if abs(linear_velocity) > 0. else 0.
 
         if abs(current_velocity) > 0.1:

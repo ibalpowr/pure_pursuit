@@ -13,7 +13,11 @@ import yaml
 import numpy as np   # apr24tue2018jz0020
 import math   # apr24tue2018jz0020
 
-STATE_COUNT_THRESHOLD = 3
+# may03thur2018jz2319
+# due to very high confidence in classification ... 1 is fine
+# also better in stopping when yellow is changing to red
+#STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 1
 
 class TLDetector(object):
     def __init__(self):
@@ -246,6 +250,9 @@ class TLDetector(object):
         """
         closest_light = None
         #line_wp_idx = None   # idx for stop line ... apr24tue2018jz0618 
+        
+        # may02wed2018jz1054
+        classification_range = 1000
 
         # apr24tue2018jz0618
         # list of positions that correspond to the line to stop 
@@ -306,8 +313,20 @@ class TLDetector(object):
             rospy.loginfo("closest stop line: %s", closest_light)
             print(" ")
 
+        # may02wed2018jz1050
+        # turn on classification only within certain range
+        # because of "valley of death" issue
+        if ((car_wp_idx is not None) and (closest_light is not None)):
+            classification_range = abs(car_wp_idx - closest_light)
 
-        if closest_light:
+        # may02wed2018jz1056
+        #if closest_light:
+        #if closest_light and (classification_range < 200):
+        # may03thur2018jz0145
+        # start classification and deceleration in the same time
+        if closest_light and (classification_range < 100):
+            # may02wed2018jz2349
+            rospy.logwarn("within classification range")
             state = self.get_light_state(closest_light)
             return closest_light, state
 
