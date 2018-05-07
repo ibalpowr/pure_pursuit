@@ -53,14 +53,14 @@ class DBWNode(object):
 
         self.loop()
 
-    def twistcmd_cb(self, msg):
+    def twist_cmd_cb(self, msg):
         self.target_lin_velocity = msg.twist.linear.x
         self.target_ang_velocity = msg.twist.angular.z
 
-    def currentvelocity_cb(self, msg):
+    def current_velocity_cb(self, msg):
         self.current_lin_velocity = msg.twist.linear.x
 
-    def dbwenabled_cb(self, msg):
+    def dbw_enabled_cb(self, msg):
         self.dbw_enabled = msg
         if not self.dbw_enabled:
             self.controller.reset()
